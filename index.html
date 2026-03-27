@@ -26,7 +26,7 @@ ul.task-list li input[type="checkbox"] {
 </style>
 
 
-<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" integrity="sha384-ZvpUoO/+PpLXR1lu4jmpXWu80pZlYUAfxl5NsBMWOEPSjUn/6Z/hRTt8+pR6L4N2" crossorigin="anonymous"></script><script src="site_libs/quarto-nav/quarto-nav.js"></script>
 <script src="site_libs/quarto-nav/headroom.min.js"></script>
 <script src="site_libs/clipboard/clipboard.min.js"></script>
 <script src="site_libs/quarto-search/autocomplete.umd.js"></script>
@@ -75,6 +75,9 @@ ul.task-list li input[type="checkbox"] {
     "search-label": "Search"
   }
 }</script>
+<script src="https://cdn.jsdelivr.net/npm/requirejs@2.3.6/require.min.js" integrity="sha384-c9c+LnTbwQ3aujuU7ULEPVvgLs+Fn6fJUvIGTsuu1ZcCf11fiEubah0ttpca4ntM sha384-6V1/AdqZRWk1KAlWbKBlGhN7VG4iE/yAZcO6NZPMF8od0vukrvr0tg4qY6NSrItx" crossorigin="anonymous"></script>
+
+<script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
 <link rel="stylesheet" href="https://migue-rc.github.io/brand-theme.css">
 
 
@@ -279,6 +282,7 @@ ul.task-list li input[type="checkbox"] {
   <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction">Introduction</a>
   <ul class="collapse">
   <li><a href="#summary-of-findings" id="toc-summary-of-findings" class="nav-link" data-scroll-target="#summary-of-findings">Summary of Findings</a></li>
+  <li><a href="#score-prediction-feature" id="toc-score-prediction-feature" class="nav-link" data-scroll-target="#score-prediction-feature">Score Prediction Feature</a></li>
   <li><a href="#project-sections" id="toc-project-sections" class="nav-link" data-scroll-target="#project-sections">Project Sections</a></li>
   </ul></li>
   </ul>
@@ -320,6 +324,264 @@ ul.task-list li input[type="checkbox"] {
 <li><strong>Segmentation:</strong> K-Means identified distinct student profiles, which can help in designing targeted educational interventions.</li>
 <li><strong>Reflection:</strong> Machine Learning provides powerful tools for early intervention in education, shifting from reacting to failure to preventing it.</li>
 </ul>
+</section>
+<section id="score-prediction-feature" class="level2">
+<h2 class="anchored" data-anchor-id="score-prediction-feature">Score Prediction Feature</h2>
+<p>Use the sliders to estimate a student’s performance based on their habits and environment.</p>
+<div id="4ee634f5" class="cell" data-execution_count="1">
+<div class="cell-output cell-output-display">
+
+<div id="score-predictor" style="max-width: 700px;">
+  <style>
+    #score-predictor .score-card {
+      border: 1px solid #d1d5db;
+      border-radius: 12px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      transition: all 0.2s ease;
+    }
+    #score-predictor .gauge-wrap {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    #score-predictor .gauge-ring {
+      --gauge-value: 0%;
+      --gauge-color: #2563eb;
+      width: 170px;
+      height: 170px;
+      border-radius: 50%;
+      background: conic-gradient(var(--gauge-color) var(--gauge-value), #e5e7eb 0);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s ease;
+    }
+    #score-predictor .gauge-center {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      text-align: center;
+      box-shadow: inset 0 0 0 1px #e5e7eb;
+    }
+    #score-predictor .gauge-score {
+      font-size: 1.7rem;
+      font-weight: 700;
+      line-height: 1.1;
+    }
+    #score-predictor .gauge-denominator {
+      font-size: 0.85rem;
+      opacity: 0.8;
+    }
+    #score-predictor .score-label {
+      font-size: 1.05rem;
+      font-weight: 600;
+      min-width: 180px;
+    }
+    #score-predictor .slider-row {
+      margin: 0.8rem 0;
+    }
+    #score-predictor .slider-label-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-bottom: 0.25rem;
+      flex-wrap: wrap;
+    }
+    #score-predictor .impact-chip {
+      font-size: 0.82rem;
+      font-weight: 700;
+      border-radius: 999px;
+      padding: 0.15rem 0.55rem;
+      border: 1px solid #e5e7eb;
+      background: #f9fafb;
+      color: #374151;
+      white-space: nowrap;
+    }
+    #score-predictor .impact-pos {
+      color: #166534;
+      background: #f0fdf4;
+      border-color: #bbf7d0;
+    }
+    #score-predictor .impact-neg {
+      color: #991b1b;
+      background: #fef2f2;
+      border-color: #fecaca;
+    }
+    #score-predictor .impact-neutral {
+      color: #374151;
+      background: #f9fafb;
+      border-color: #e5e7eb;
+    }
+  </style>
+  <div class="score-card" id="score_card">
+    <div class="gauge-wrap">
+      <div class="gauge-ring" id="gauge_ring">
+        <div class="gauge-center">
+          <span class="gauge-score" id="prediction_value">--</span>
+          <span class="gauge-denominator">predicted score</span>
+        </div>
+      </div>
+      <div class="score-label" id="score_label">Move a slider to evaluate.</div>
+    </div>
+  </div>
+  <p>Move the sliders to update the predicted score:</p>
+  <div class="slider-row">
+  <div class="slider-label-row">
+    <label for="hours_studied" style="display: block; font-weight: 600;">Hours: <span id="hours_studied_value">20</span></label>
+    <span class="impact-chip impact-neutral" id="hours_studied_impact">Impact: +0.00 pts</span>
+  </div>
+  <input id="hours_studied" type="range" min="0" max="50" step="1" value="20" style="width: 100%;">
+</div>
+<div class="slider-row">
+  <div class="slider-label-row">
+    <label for="attendance" style="display: block; font-weight: 600;">Attendance: <span id="attendance_value">90</span></label>
+    <span class="impact-chip impact-neutral" id="attendance_impact">Impact: +0.00 pts</span>
+  </div>
+  <input id="attendance" type="range" min="50" max="100" step="1" value="90" style="width: 100%;">
+</div>
+<div class="slider-row">
+  <div class="slider-label-row">
+    <label for="sleep_hours" style="display: block; font-weight: 600;">Sleep: <span id="sleep_hours_value">7</span></label>
+    <span class="impact-chip impact-neutral" id="sleep_hours_impact">Impact: +0.00 pts</span>
+  </div>
+  <input id="sleep_hours" type="range" min="3" max="12" step="1" value="7" style="width: 100%;">
+</div>
+<div class="slider-row">
+  <div class="slider-label-row">
+    <label for="previous_scores" style="display: block; font-weight: 600;">Prev Score: <span id="previous_scores_value">80</span></label>
+    <span class="impact-chip impact-neutral" id="previous_scores_impact">Impact: +0.00 pts</span>
+  </div>
+  <input id="previous_scores" type="range" min="0" max="100" step="1" value="80" style="width: 100%;">
+</div>
+<div class="slider-row">
+  <div class="slider-label-row">
+    <label for="tutoring_sessions" style="display: block; font-weight: 600;">Tutoring: <span id="tutoring_sessions_value">2</span></label>
+    <span class="impact-chip impact-neutral" id="tutoring_sessions_impact">Impact: +0.00 pts</span>
+  </div>
+  <input id="tutoring_sessions" type="range" min="0" max="10" step="1" value="2" style="width: 100%;">
+</div>
+<div class="slider-row">
+  <div class="slider-label-row">
+    <label for="physical_activity" style="display: block; font-weight: 600;">Activity: <span id="physical_activity_value">3</span></label>
+    <span class="impact-chip impact-neutral" id="physical_activity_impact">Impact: +0.00 pts</span>
+  </div>
+  <input id="physical_activity" type="range" min="0" max="14" step="1" value="3" style="width: 100%;">
+</div>
+</div>
+<script>
+(() => {
+  const intercept = 66.18201216606987;
+  const coefficients = {"num__Hours_Studied": 0.6043811810070415, "num__Attendance": 2.103743464489227, "num__Sleep_Hours": 0.14547001165849185, "num__Previous_Scores": 0.7024513362460927, "num__Tutoring_Sessions": 0.4553816865974026, "num__Physical_Activity": 0.17857392501791816, "num__Study_Intensity": 0.41848060058066927, "num__Academic_Effort": 0.6863121611672057, "num__Study_Sleep_Balance": 0.17855946236366918, "cat__Parental_Involvement_High": 1.0353351452316948, "cat__Parental_Involvement_Low": -0.9855252606535193, "cat__Parental_Involvement_Medium": -0.04980988457817492, "cat__Access_to_Resources_High": 1.043816748611401, "cat__Access_to_Resources_Low": -1.0494855110801373, "cat__Access_to_Resources_Medium": 0.0056687624687346665, "cat__Extracurricular_Activities_No": -0.2772592519867856, "cat__Extracurricular_Activities_Yes": 0.2772592519867864, "cat__Motivation_Level_High": 0.5470886140369904, "cat__Motivation_Level_Low": -0.5342672185151135, "cat__Motivation_Level_Medium": -0.012821395521876937, "cat__Internet_Access_No": -0.47731059215939386, "cat__Internet_Access_Yes": 0.47731059215939403, "cat__Family_Income_High": 0.5204745197327233, "cat__Family_Income_Low": -0.4963687903658779, "cat__Family_Income_Medium": -0.024105729366846733, "cat__Teacher_Quality_High": 0.5254589935177933, "cat__Teacher_Quality_Low": -0.5136194297313794, "cat__Teacher_Quality_Medium": -0.0118395637864142, "cat__School_Type_Private": -0.003419016787587801, "cat__School_Type_Public": 0.003419016787587917, "cat__Peer_Influence_Negative": -0.5043418112317728, "cat__Peer_Influence_Neutral": 0.013366033984390829, "cat__Peer_Influence_Positive": 0.49097577724738134, "cat__Learning_Disabilities_No": 0.44527866010516826, "cat__Learning_Disabilities_Yes": -0.4452786601051682, "cat__Parental_Education_Level_College": 0.02229690072027837, "cat__Parental_Education_Level_High School": -0.5136298574755462, "cat__Parental_Education_Level_Postgraduate": 0.4913329567552677, "cat__Distance_from_Home_Far": -0.38470059480287877, "cat__Distance_from_Home_Moderate": -0.07965002470493163, "cat__Distance_from_Home_Near": 0.4643506195078104, "cat__Gender_Female": 0.0071432289666930405, "cat__Gender_Male": -0.0071432289666931905};
+  const numericStats = {"Hours_Studied": {"mean": 20.009084027252083, "scale": 5.9672263493240605}, "Attendance": {"mean": 79.99507948523845, "scale": 11.533201521382479}, "Sleep_Hours": {"mean": 7.022142316426949, "scale": 1.4697562552492998}, "Previous_Scores": {"mean": 75.03425435276306, "scale": 14.363157828059443}, "Tutoring_Sessions": {"mean": 1.4911052233156699, "scale": 1.2326449981345649}, "Physical_Activity": {"mean": 2.97331566994701, "scale": 1.0297649634326385}, "Study_Intensity": {"mean": 16.000401211203634, "scale": 5.315707758001465}, "Academic_Effort": {"mean": 21.50018925056775, "scale": 6.072751587964048}, "Study_Sleep_Balance": {"mean": -29.145912187736563, "scale": 11.815901903534678}};
+  const defaults = {"Parental_Involvement": "Medium", "Access_to_Resources": "Medium", "Extracurricular_Activities": "Yes", "Motivation_Level": "Medium", "Internet_Access": "Yes", "School_Type": "Public", "Peer_Influence": "Neutral", "Learning_Disabilities": "No", "Parental_Education_Level": "High School", "Distance_from_Home": "Near", "Gender": "Male", "Teacher_Quality": "Medium", "Family_Income": "Medium"};
+  const sliderConfig = [{"id": "hours_studied", "feature": "Hours_Studied", "label": "Hours", "min": 0, "max": 50, "step": 1, "value": 20}, {"id": "attendance", "feature": "Attendance", "label": "Attendance", "min": 50, "max": 100, "step": 1, "value": 90}, {"id": "sleep_hours", "feature": "Sleep_Hours", "label": "Sleep", "min": 3, "max": 12, "step": 1, "value": 7}, {"id": "previous_scores", "feature": "Previous_Scores", "label": "Prev Score", "min": 0, "max": 100, "step": 1, "value": 80}, {"id": "tutoring_sessions", "feature": "Tutoring_Sessions", "label": "Tutoring", "min": 0, "max": 10, "step": 1, "value": 2}, {"id": "physical_activity", "feature": "Physical_Activity", "label": "Activity", "min": 0, "max": 14, "step": 1, "value": 3}];
+
+  const getSliderValue = (id) => Number(document.getElementById(id).value);
+  const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+  const formatSigned = (value) => `${value >= 0 ? '+' : ''}${value.toFixed(2)}`;
+
+  const getScoreBand = (score) => {
+    if (score < 60) {
+      return { label: 'Needs support', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' };
+    }
+    if (score < 80) {
+      return { label: 'On track', color: '#d97706', bg: '#fffbeb', border: '#fde68a' };
+    }
+    return { label: 'Excellent', color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' };
+  };
+
+  const computeLinearPrediction = (rawValues) => {
+    const values = {
+      ...rawValues,
+      Study_Intensity: rawValues.Hours_Studied * (rawValues.Attendance / 100),
+      Academic_Effort: rawValues.Hours_Studied + rawValues.Tutoring_Sessions,
+      Study_Sleep_Balance: rawValues.Hours_Studied - (rawValues.Sleep_Hours * 7)
+    };
+
+    let prediction = intercept;
+
+    Object.entries(values).forEach(([feature, value]) => {
+      const key = `num__${feature}`;
+      const stats = numericStats[feature];
+      if (coefficients[key] !== undefined && stats) {
+        const scaledValue = (value - stats.mean) / stats.scale;
+        prediction += coefficients[key] * scaledValue;
+      }
+    });
+
+    Object.entries(defaults).forEach(([feature, value]) => {
+      const key = `cat__${feature}_${value}`;
+      if (coefficients[key] !== undefined) {
+        prediction += coefficients[key];
+      }
+    });
+
+    return prediction;
+  };
+
+  const computePrediction = () => {
+    const rawValues = {};
+    sliderConfig.forEach((item) => {
+      rawValues[item.feature] = getSliderValue(item.id);
+      document.getElementById(`${item.id}_value`).textContent = rawValues[item.feature];
+    });
+
+    const prediction = computeLinearPrediction(rawValues);
+
+    sliderConfig.forEach((item) => {
+      const baselineValues = { ...rawValues, [item.feature]: item.value };
+      const baselinePrediction = computeLinearPrediction(baselineValues);
+      const impact = prediction - baselinePrediction;
+
+      const impactEl = document.getElementById(`${item.id}_impact`);
+      impactEl.textContent = `Impact: ${formatSigned(impact)} pts`;
+      impactEl.classList.remove('impact-pos', 'impact-neg', 'impact-neutral');
+
+      if (Math.abs(impact) < 0.01) {
+        impactEl.classList.add('impact-neutral');
+      } else if (impact > 0) {
+        impactEl.classList.add('impact-pos');
+      } else {
+        impactEl.classList.add('impact-neg');
+      }
+    });
+
+    const band = getScoreBand(prediction);
+    const gaugeValue = clamp(prediction, 0, 100);
+    const predictionElement = document.getElementById('prediction_value');
+    const gaugeRing = document.getElementById('gauge_ring');
+    const scoreCard = document.getElementById('score_card');
+    const scoreLabel = document.getElementById('score_label');
+
+    predictionElement.textContent = prediction.toFixed(2);
+    predictionElement.style.color = band.color;
+    gaugeRing.style.setProperty('--gauge-color', band.color);
+    gaugeRing.style.setProperty('--gauge-value', `${gaugeValue}%`);
+    scoreCard.style.background = band.bg;
+    scoreCard.style.borderColor = band.border;
+    scoreLabel.style.color = band.color;
+    scoreLabel.textContent = `${band.label} · ${gaugeValue.toFixed(1)}% of target range`;
+  };
+
+  sliderConfig.forEach((item) => {
+    const slider = document.getElementById(item.id);
+    slider.addEventListener('input', computePrediction);
+    slider.addEventListener('change', computePrediction);
+  });
+
+  computePrediction();
+})();
+</script>
+</div>
+</div>
 </section>
 <section id="project-sections" class="level2">
 <h2 class="anchored" data-anchor-id="project-sections">Project Sections</h2>
@@ -421,7 +683,7 @@ ul.task-list li input[type="checkbox"] {
     }
       var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
       var mailtoRegex = new RegExp(/^mailto:/);
-        var filterRegex = new RegExp('/' + window.location.host + '/');
+        var filterRegex = new RegExp("git@github\.com:\/migue-rc\/student-performance\.git");
       var isInternal = (href) => {
           return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
       }

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>git@github.com:/migue-rc/student-performance.git/01_data_preparation.html</loc>
+    <lastmod>2026-03-27T03:19:16.070Z</lastmod>
+  </url>
+  <url>
+    <loc>git@github.com:/migue-rc/student-performance.git/04_conclusions.html</loc>
+    <lastmod>2026-03-27T03:19:53.645Z</lastmod>
+  </url>
+  <url>
+    <loc>git@github.com:/migue-rc/student-performance.git/03_modeling.html</loc>
+    <lastmod>2026-03-27T19:31:12.853Z</lastmod>
+  </url>
+  <url>
+    <loc>git@github.com:/migue-rc/student-performance.git/02_eda.html</loc>
+    <lastmod>2026-03-27T03:19:23.852Z</lastmod>
+  </url>
+  <url>
+    <loc>git@github.com:/migue-rc/student-performance.git/index.html</loc>
+    <lastmod>2026-03-27T21:15:15.011Z</lastmod>
+  </url>
+</urlset>
