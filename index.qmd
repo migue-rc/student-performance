@@ -1,0 +1,310 @@
+---
+title: "Student Performance Factors Analysis"
+---
+
+# Introduction
+
+This project explores the "Student Performance Factors" dataset, publicly available on Kaggle. This dataset collects individual-level student information, integrating academic, family, socioeconomic, and behavioral variables. The goal is to analyze factors associated with academic performance as measured by the score obtained in final evaluations.
+
+The dataset includes variables related to study habits, attendance, access to educational resources, motivation level, family environment characteristics, school type, and other relevant determinants of school performance. This diversity of variables allows for a multivariate approach to academic performance, recognizing that educational outcomes depend not only on individual factors but also on structural and contextual conditions.
+
+From an applied perspective, this dataset is particularly relevant for educational studies, facilitating the identification of patterns associated with academic performance and the segmentation of students according to performance profiles. In educational policy and school support program contexts, this type of analysis is fundamental to guide targeted interventions, optimize resource allocation, and strengthen strategies for improving learning.
+
+## Summary of Findings
+
+- **Data Quality:** The dataset is high quality with minimal cleaning required.
+- **Best Model:** Linear Regression is the most effective (R2 ~0.825), showing that factors like attendance and study hours have a strong linear relationship with performance.
+- **Segmentation:** K-Means identified distinct student profiles, which can help in designing targeted educational interventions.
+- **Reflection:** Machine Learning provides powerful tools for early intervention in education, shifting from reacting to failure to preventing it.
+
+## Score Prediction Feature
+
+Use the sliders to estimate a student's performance based on their habits and environment.
+
+```{python}
+#| echo: false
+#| warning: false
+import json
+import joblib
+import os
+from IPython.display import HTML, display
+
+model_path = 'model_pipeline.joblib'
+if os.path.exists(model_path):
+    model = joblib.load(model_path)
+    preprocessor = model.named_steps['preprocessor']
+    numeric_features = list(preprocessor.transformers_[0][2])
+    scaler = preprocessor.named_transformers_['num'].named_steps['scaler']
+    feature_names = preprocessor.get_feature_names_out()
+    coefficients = {
+        feature_name: float(coef)
+        for feature_name, coef in zip(feature_names, model.named_steps['model'].coef_)
+    }
+    numeric_stats = {
+        feature: {
+            'mean': float(mean),
+            'scale': float(scale)
+        }
+        for feature, mean, scale in zip(numeric_features, scaler.mean_, scaler.scale_)
+    }
+    defaults = {
+        'Parental_Involvement': 'Medium',
+        'Access_to_Resources': 'Medium',
+        'Extracurricular_Activities': 'Yes',
+        'Motivation_Level': 'Medium',
+        'Internet_Access': 'Yes',
+        'School_Type': 'Public',
+        'Peer_Influence': 'Neutral',
+        'Learning_Disabilities': 'No',
+        'Parental_Education_Level': 'High School',
+        'Distance_from_Home': 'Near',
+        'Gender': 'Male',
+        'Teacher_Quality': 'Medium',
+        'Family_Income': 'Medium'
+    }
+    slider_config = [
+        {'id': 'hours_studied', 'feature': 'Hours_Studied', 'label': 'Hours', 'min': 0, 'max': 50, 'step': 1, 'value': 20},
+        {'id': 'attendance', 'feature': 'Attendance', 'label': 'Attendance', 'min': 50, 'max': 100, 'step': 1, 'value': 90},
+        {'id': 'sleep_hours', 'feature': 'Sleep_Hours', 'label': 'Sleep', 'min': 3, 'max': 12, 'step': 1, 'value': 7},
+        {'id': 'previous_scores', 'feature': 'Previous_Scores', 'label': 'Prev Score', 'min': 0, 'max': 100, 'step': 1, 'value': 80},
+        {'id': 'tutoring_sessions', 'feature': 'Tutoring_Sessions', 'label': 'Tutoring', 'min': 0, 'max': 10, 'step': 1, 'value': 2},
+        {'id': 'physical_activity', 'feature': 'Physical_Activity', 'label': 'Activity', 'min': 0, 'max': 14, 'step': 1, 'value': 3}
+    ]
+
+    slider_html = "\n".join(
+        [
+            f"""
+<div class=\"slider-row\">
+  <div class=\"slider-label-row\">
+    <label for=\"{item['id']}\" style=\"display: block; font-weight: 600;\">{item['label']}: <span id=\"{item['id']}_value\">{item['value']}</span></label>
+    <span class=\"impact-chip impact-neutral\" id=\"{item['id']}_impact\">Impact: +0.00 pts</span>
+  </div>
+  <input id=\"{item['id']}\" type=\"range\" min=\"{item['min']}\" max=\"{item['max']}\" step=\"{item['step']}\" value=\"{item['value']}\" style=\"width: 100%;\" />
+</div>
+""".strip()
+            for item in slider_config
+        ]
+    )
+
+    widget_html = f"""
+<div id=\"score-predictor\" style=\"max-width: 700px;\">
+  <style>
+    #score-predictor .score-card {{
+      border: 1px solid #d1d5db;
+      border-radius: 12px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      transition: all 0.2s ease;
+    }}
+    #score-predictor .gauge-wrap {{
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }}
+    #score-predictor .gauge-ring {{
+      --gauge-value: 0%;
+      --gauge-color: #2563eb;
+      width: 170px;
+      height: 170px;
+      border-radius: 50%;
+      background: conic-gradient(var(--gauge-color) var(--gauge-value), #e5e7eb 0);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s ease;
+    }}
+    #score-predictor .gauge-center {{
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      text-align: center;
+      box-shadow: inset 0 0 0 1px #e5e7eb;
+    }}
+    #score-predictor .gauge-score {{
+      font-size: 1.7rem;
+      font-weight: 700;
+      line-height: 1.1;
+    }}
+    #score-predictor .gauge-denominator {{
+      font-size: 0.85rem;
+      opacity: 0.8;
+    }}
+    #score-predictor .score-label {{
+      font-size: 1.05rem;
+      font-weight: 600;
+      min-width: 180px;
+    }}
+    #score-predictor .slider-row {{
+      margin: 0.8rem 0;
+    }}
+    #score-predictor .slider-label-row {{
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-bottom: 0.25rem;
+      flex-wrap: wrap;
+    }}
+    #score-predictor .impact-chip {{
+      font-size: 0.82rem;
+      font-weight: 700;
+      border-radius: 999px;
+      padding: 0.15rem 0.55rem;
+      border: 1px solid #e5e7eb;
+      background: #f9fafb;
+      color: #374151;
+      white-space: nowrap;
+    }}
+    #score-predictor .impact-pos {{
+      color: #166534;
+      background: #f0fdf4;
+      border-color: #bbf7d0;
+    }}
+    #score-predictor .impact-neg {{
+      color: #991b1b;
+      background: #fef2f2;
+      border-color: #fecaca;
+    }}
+    #score-predictor .impact-neutral {{
+      color: #374151;
+      background: #f9fafb;
+      border-color: #e5e7eb;
+    }}
+  </style>
+  <div class=\"score-card\" id=\"score_card\">
+    <div class=\"gauge-wrap\">
+      <div class=\"gauge-ring\" id=\"gauge_ring\">
+        <div class=\"gauge-center\">
+          <span class=\"gauge-score\" id=\"prediction_value\">--</span>
+          <span class=\"gauge-denominator\">predicted score</span>
+        </div>
+      </div>
+      <div class=\"score-label\" id=\"score_label\">Move a slider to evaluate.</div>
+    </div>
+  </div>
+  <p>Move the sliders to update the predicted score:</p>
+  {slider_html}
+</div>
+<script>
+(() => {{
+  const intercept = {float(model.named_steps['model'].intercept_)};
+  const coefficients = {json.dumps(coefficients)};
+  const numericStats = {json.dumps(numeric_stats)};
+  const defaults = {json.dumps(defaults)};
+  const sliderConfig = {json.dumps(slider_config)};
+
+  const getSliderValue = (id) => Number(document.getElementById(id).value);
+  const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+  const formatSigned = (value) => `${{value >= 0 ? '+' : ''}}${{value.toFixed(2)}}`;
+
+  const getScoreBand = (score) => {{
+    if (score < 60) {{
+      return {{ label: 'Needs support', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' }};
+    }}
+    if (score < 80) {{
+      return {{ label: 'On track', color: '#d97706', bg: '#fffbeb', border: '#fde68a' }};
+    }}
+    return {{ label: 'Excellent', color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' }};
+  }};
+
+  const computeLinearPrediction = (rawValues) => {{
+    const values = {{
+      ...rawValues,
+      Study_Intensity: rawValues.Hours_Studied * (rawValues.Attendance / 100),
+      Academic_Effort: rawValues.Hours_Studied + rawValues.Tutoring_Sessions,
+      Study_Sleep_Balance: rawValues.Hours_Studied - (rawValues.Sleep_Hours * 7)
+    }};
+
+    let prediction = intercept;
+
+    Object.entries(values).forEach(([feature, value]) => {{
+      const key = `num__${{feature}}`;
+      const stats = numericStats[feature];
+      if (coefficients[key] !== undefined && stats) {{
+        const scaledValue = (value - stats.mean) / stats.scale;
+        prediction += coefficients[key] * scaledValue;
+      }}
+    }});
+
+    Object.entries(defaults).forEach(([feature, value]) => {{
+      const key = `cat__${{feature}}_${{value}}`;
+      if (coefficients[key] !== undefined) {{
+        prediction += coefficients[key];
+      }}
+    }});
+
+    return prediction;
+  }};
+
+  const computePrediction = () => {{
+    const rawValues = {{}};
+    sliderConfig.forEach((item) => {{
+      rawValues[item.feature] = getSliderValue(item.id);
+      document.getElementById(`${{item.id}}_value`).textContent = rawValues[item.feature];
+    }});
+
+    const prediction = computeLinearPrediction(rawValues);
+
+    sliderConfig.forEach((item) => {{
+      const baselineValues = {{ ...rawValues, [item.feature]: item.value }};
+      const baselinePrediction = computeLinearPrediction(baselineValues);
+      const impact = prediction - baselinePrediction;
+
+      const impactEl = document.getElementById(`${{item.id}}_impact`);
+      impactEl.textContent = `Impact: ${{formatSigned(impact)}} pts`;
+      impactEl.classList.remove('impact-pos', 'impact-neg', 'impact-neutral');
+
+      if (Math.abs(impact) < 0.01) {{
+        impactEl.classList.add('impact-neutral');
+      }} else if (impact > 0) {{
+        impactEl.classList.add('impact-pos');
+      }} else {{
+        impactEl.classList.add('impact-neg');
+      }}
+    }});
+
+    const band = getScoreBand(prediction);
+    const gaugeValue = clamp(prediction, 0, 100);
+    const predictionElement = document.getElementById('prediction_value');
+    const gaugeRing = document.getElementById('gauge_ring');
+    const scoreCard = document.getElementById('score_card');
+    const scoreLabel = document.getElementById('score_label');
+
+    predictionElement.textContent = prediction.toFixed(2);
+    predictionElement.style.color = band.color;
+    gaugeRing.style.setProperty('--gauge-color', band.color);
+    gaugeRing.style.setProperty('--gauge-value', `${{gaugeValue}}%`);
+    scoreCard.style.background = band.bg;
+    scoreCard.style.borderColor = band.border;
+    scoreLabel.style.color = band.color;
+    scoreLabel.textContent = `${{band.label}} · ${{gaugeValue.toFixed(1)}}% of target range`;
+  }};
+
+  sliderConfig.forEach((item) => {{
+    const slider = document.getElementById(item.id);
+    slider.addEventListener('input', computePrediction);
+    slider.addEventListener('change', computePrediction);
+  }});
+
+  computePrediction();
+}})();
+</script>
+"""
+
+    display(HTML(widget_html))
+else:
+    print("> *Prediction model is not yet available. Please render the Modeling section to export the weights.*")
+```
+
+## Project Sections
+
+1. [Data Preparation](01_data_preparation.qmd): Data loading, cleaning, and initial exploration.
+2. [Exploratory Data Analysis](02_eda.qmd): Univariate and bivariate analysis of the variables.
+3. [Modeling (Supervised & Unsupervised)](03_modeling.qmd): Prediction of scores and student segmentation.
+4. [Conclusions](04_conclusions.qmd): Summary and final reflections.

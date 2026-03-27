@@ -1,0 +1,220 @@
+---
+title: "Modeling"
+---
+
+```{python}
+#| echo: false
+#| output: false
+import pandas as pd
+import numpy as np
+import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+
+from sklearn.model_selection import train_test_split, cross_validate
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+
+from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+from sklearn.svm import SVR
+from sklearn.neighbors import KNeighborsRegressor
+
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+
+from sklearn.cluster import KMeans
+from sklearn.decomposition import PCA
+from sklearn.metrics import silhouette_score
+import json
+import joblib
+
+# Data loading and cleaning
+path = 'data/StudentPerformanceFactors.csv'
+df = pd.read_csv(path)
+df_clean = df.copy()
+cols_to_fix = ['Teacher_Quality', 'Parental_Education_Level', 'Distance_from_Home']
+for col in cols_to_fix:
+    if col in df_clean.columns:
+        moda = df_clean[col].mode()[0]
+        df_clean[col] = df_clean[col].fillna(moda)
+df_clean = df_clean[df_clean["Exam_Score"].between(0, 100)].copy()
+df_clean.reset_index(drop=True, inplace=True)
+
+# Feature Engineering
+df_fe = df_clean.copy()
+df_fe["Study_Intensity"] = df_fe["Hours_Studied"] * (df_fe["Attendance"] / 100)
+df_fe["Academic_Effort"] = df_fe["Hours_Studied"] + df_fe["Tutoring_Sessions"]
+df_fe["Study_Sleep_Balance"] = (df_fe["Hours_Studied"] - (df_fe["Sleep_Hours"] * 7))
+```
+
+## 6 - Data Preprocessing
+
+```{python}
+target = "Exam_Score"
+X = df_fe.drop(columns=[target])
+y = df_fe[target]
+
+numeric_features = X.select_dtypes(include=["int64", "float64", "int32", "float32"]).columns.tolist()
+categorical_features = X.select_dtypes(include=["object", "category", "bool"]).columns.tolist()
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+numeric_transformer = Pipeline(steps=[
+    ("imputer", SimpleImputer(strategy="median")),
+    ("scaler", StandardScaler())])
+
+categorical_transformer = Pipeline(steps=[
+    ("imputer", SimpleImputer(strategy="most_frequent")),
+    ("onehot", OneHotEncoder(handle_unknown="ignore", sparse_output=False))])
+
+preprocessor = ColumnTransformer(transformers=[
+    ("num", numeric_transformer, numeric_features),
+    ("cat", categorical_transformer, categorical_features)], remainder="drop")
+
+X_train_prepared = preprocessor.fit_transform(X_train)
+X_test_prepared = preprocessor.transform(X_test)
+```
+
+## 7 - Modeling
+
+### 7.1 Supervised Learning
+
+```{python}
+models = {
+    'Linear Regression': LinearRegression(),
+    'Random Forest': RandomForestRegressor(random_state=42),
+    'Gradient Boosting': GradientBoostingRegressor(random_state=42),
+    'Support Vector Machine': SVR(),
+    'K-Nearest Neighbors': KNeighborsRegressor()
+}
+
+reg_pipelines = {}
+resultados_supervisado = []
+
+for name, model in models.items():
+    pipeline = Pipeline(steps=[('preprocessor', preprocessor), ('model', model)])
+    pipeline.fit(X_train, y_train)
+    reg_pipelines[name] = pipeline
+    
+    cv_results = cross_validate(pipeline, X_train, y_train, cv=5, 
+                                scoring={'R2': 'r2', 'MAE': 'neg_mean_absolute_error', 'RMSE': 'neg_root_mean_squared_error'})
+    
+    resultados_supervisado.append({
+        'Model': name,
+        'R2 (train)': cv_results['test_R2'].mean(),
+        'MAE (train)': -cv_results['test_MAE'].mean(),
+        'RMSE (train)': -cv_results['test_RMSE'].mean()
+    })
+
+df_train_results = pd.DataFrame(resultados_supervisado).set_index('Model')
+
+# Evaluation on Test Set
+resultados_test = []
+for name, pipeline in reg_pipelines.items():
+    y_pred = pipeline.predict(X_test)
+    resultados_test.append({
+        'Model': name,
+        'R2 (test)': r2_score(y_test, y_pred),
+        'MAE (test)': mean_absolute_error(y_test, y_pred),
+        'RMSE (test)': np.sqrt(mean_squared_error(y_test, y_pred)),
+    })
+df_test_results = pd.DataFrame(resultados_test).set_index('Model')
+df_results = df_test_results.merge(df_train_results, on='Model')
+
+# Plotting metrics with Plotly
+fig = make_subplots(rows=1, cols=3, subplot_titles=("R2 Score", "MAE", "RMSE"))
+metrics = ['R2', 'MAE', 'RMSE']
+for i, metric in enumerate(metrics):
+    fig.add_trace(go.Bar(name=f'{metric} train', x=df_results.index, y=df_results[f'{metric} (train)']), row=1, col=i+1)
+    fig.add_trace(go.Bar(name=f'{metric} test', x=df_results.index, y=df_results[f'{metric} (test)']), row=1, col=i+1)
+
+fig.update_layout(title_text="Model Comparison", barmode='group')
+fig.show()
+
+display(df_results)
+```
+
+**Conclusions on Supervised Learning:**
+Linear Regression performed best with an R2 of ~0.82. It error is less than half a point on average (MAE 0.41).
+
+### Analysis of the Best Model (Linear Regression)
+
+```{python}
+best_model_name = 'Linear Regression'
+best_pipeline = reg_pipelines[best_model_name]
+lr_model = best_pipeline.named_steps['model']
+
+y_pred = best_pipeline.predict(X_test)
+fig = px.scatter(x=y_test, y=y_pred, labels={'x': 'Real Values', 'y': 'Predictions'},
+                 title=f'Predictions vs Real Values - {best_model_name}')
+fig.add_shape(type="line", x0=y_test.min(), y0=y_test.min(), x1=y_test.max(), y1=y_test.max(),
+              line=dict(color="Red", dash="dash"))
+fig.show()
+
+# Coefficients
+feature_names = preprocessor.get_feature_names_out()
+coef_df = pd.DataFrame({'Feature': feature_names, 'Coef': lr_model.coef_})
+coef_df['Feature'] = coef_df['Feature'].str.replace('cat__', '').str.replace('num__', '').str.replace('_', ' ')
+coef_df = coef_df.sort_values(by='Coef', ascending=False)
+
+fig = px.bar(coef_df, x='Coef', y='Feature', orientation='h', color='Coef',
+             color_continuous_scale='RdBu_r', title='Impact of Variables on Final Grade')
+fig.show()
+
+### Exporting Model Weights
+# We export the coefficients and intercept for usage in index.qmd
+# Also exporting the full pipeline for easier use in Python code
+
+# Prepare weights and intercept
+feature_names_raw = preprocessor.get_feature_names_out()
+weights_data = {
+    'intercept': float(lr_model.intercept_),
+    'coefficients': dict(zip(feature_names_raw, lr_model.coef_.tolist()))
+}
+
+# Save to JSON for potential Javascript/OJS use
+with open('model_weights.json', 'w') as f:
+    json.dump(weights_data, f, indent=4)
+
+# Save the full pipeline as a joblib file for Python usage
+joblib.dump(best_pipeline, 'model_pipeline.joblib')
+
+# Save to CSV for easy inspection
+coef_df_export = pd.DataFrame({'Feature': feature_names_raw, 'Weight': lr_model.coef_})
+coef_df_export = pd.concat([pd.DataFrame({'Feature': ['Intercept'], 'Weight': [lr_model.intercept_]}), coef_df_export])
+coef_df_export.to_csv('model_weights.csv', index=False)
+```
+
+## 7.2 Unsupervised Learning
+
+```{python}
+nc = ['Hours_Studied','Attendance', 'Sleep_Hours','Previous_Scores','Tutoring_Sessions','Physical_Activity', 'Study_Intensity', 'Academic_Effort']
+X_kmeans = df_fe[nc]
+X_km_scaled = StandardScaler().fit_transform(X_kmeans)
+
+# Elbow Method and Silhouette Score
+k_range = range(2, 11)
+inertia = []
+silhouette_scores = []
+for k in k_range:
+    km = KMeans(n_clusters=k, random_state=42)
+    km.fit(X_km_scaled)
+    inertia.append(km.inertia_)
+    silhouette_scores.append(silhouette_score(X_km_scaled, km.labels_))
+
+fig = make_subplots(rows=1, cols=2, subplot_titles=("Elbow Method", "Silhouette Score"))
+fig.add_trace(go.Scatter(x=list(k_range), y=inertia, mode='lines+markers'), row=1, col=1)
+fig.add_trace(go.Scatter(x=list(k_range), y=silhouette_scores, mode='lines+markers'), row=1, col=2)
+fig.show()
+
+# PCA Visualization
+pca = PCA(n_components=2)
+X_pca = pca.fit_transform(X_km_scaled)
+clusters = KMeans(n_clusters=2, random_state=42).fit_predict(X_km_scaled)
+
+fig = px.scatter(x=X_pca[:, 0], y=X_pca[:, 1], color=clusters.astype(str),
+                 labels={'x': 'PC1', 'y': 'PC2'}, title='Cluster Visualization (PCA)')
+fig.show()
+```

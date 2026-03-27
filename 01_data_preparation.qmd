@@ -1,0 +1,154 @@
+---
+title: "Data Preparation"
+---
+
+## 2 - Initial Setup
+
+### 2.1 Loading Libraries
+
+```{python}
+import pandas as pd
+import numpy as np
+import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+
+from sklearn.model_selection import train_test_split, cross_validate
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+
+from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+from sklearn.svm import SVR
+from sklearn.neighbors import KNeighborsRegressor
+
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+
+from sklearn.cluster import KMeans
+from sklearn.decomposition import PCA
+from sklearn.metrics import silhouette_score
+```
+
+---
+
+## 3 - Data Preparation
+
+### 3.1 Data Loading and Quick View
+
+```{python}
+# =========================== Dataset Loading ===========================
+# Note: Using relative path for portability
+path = 'data/StudentPerformanceFactors.csv'
+df = pd.read_csv(path)
+print(f" Rows: {df.shape[0]:,} | Columns: {df.shape[1]}")
+
+# === Show first rows of the dataset ===
+print('First 5 rows')
+display(df.head())
+```
+
+### 3.2 Variable Description
+
+- **`Gender`**: Student's gender (Male/Female).
+- **`Hours_Studied`**: Average number of study hours per week.
+- **`Attendance`**: Percentage of attendance during the academic period.
+- **`Parental_Involvement`**: Level of parental involvement (Low, Medium, High).
+- **`Access_to_Resources`**: Availability of educational resources (Low, Medium, High).
+- **`Extracurricular_Activities`**: Participation in extracurricular activities (Yes/No).
+- **`Sleep_Hours`**: Average number of sleep hours per night.
+- **`Previous_Scores`**: Academic score obtained in previous evaluations.
+- **`Motivation_Level`**: Student's motivation level (Low, Medium, High).
+- **`Internet_Access`**: Availability of internet access (Yes/No).
+- **`Tutoring_Sessions`**: Number of tutoring sessions per month.
+- **`Family_Income`**: Family income level (Low, Medium, High).
+- **`Teacher_Quality`**: Quality of the teacher (Low, Medium, High).
+- **`School_Type`**: Type of school (Public/Private).
+- **`Peer_Influence`**: Influence of the peer group (Positive, Neutral, Negative).
+- **`Physical_Activity`**: Average hours of physical activity per week.
+- **`Learning_Disabilities`**: Presence of learning difficulties (Yes/No).
+- **`Parental_Education_Level`**: Highest education level of parents (High School, College, Postgraduate).
+- **`Distance_from_Home`**: Distance between home and school (Near, Moderate, Far).
+- **`Exam_Score`**: Final score obtained (Target variable).
+
+### 3.3 Data Summary
+
+```{python}
+df.info()
+display(df.describe())
+```
+
+### 3.4 Data Cleaning
+
+#### 3.4.1 Nulls and Duplicates
+
+```{python}
+null_counts = df.isnull().sum()
+print("Null count per column:\n")
+print(null_counts[null_counts > 0])
+print("\nNumber of duplicate rows:", df.duplicated().sum())
+```
+
+#### 3.4.2 Null Diagnosis
+
+```{python}
+nan_cols = [col for col in df.columns if df[col].isna().any()]
+df_nan = df[nan_cols + ['Exam_Score']].copy()
+
+for col in nan_cols:
+    df_nan['Status'] = df_nan[col].isna().map({True: 'Is Null', False: 'Has Data'})
+    fig = px.box(df_nan, x="Status", y='Exam_Score', title=f'Impact of Nulls in {col}')
+    fig.show()
+```
+
+#### 3.4.3 Missing Value Treatment (Imputation)
+
+**Analysis:**
+Variables like `Teacher_Quality`, `Parental_Education_Level`, and `Distance_from_Home` have real missing values (NaN). Since the percentage is low (< 2%) and the distribution of `Exam_Score` is similar between null and complete data, we conclude that the absence of data is not strongly correlated with the dependent variable.
+
+**Action:**
+We impute these values using the **mode** (most frequent value).
+
+```{python}
+df_clean = df.copy()
+cols_to_fix = ['Teacher_Quality', 'Parental_Education_Level', 'Distance_from_Home']
+
+for col in cols_to_fix:
+    if col in df_clean.columns:
+        moda = df_clean[col].mode()[0]
+        df_clean[col] = df_clean[col].fillna(moda)
+
+print(f"Remaining nulls in df_clean: {df_clean.isnull().sum().sum()}")
+```
+
+#### 3.4.4 Removing Inconsistencies
+
+```{python}
+# Detecting outliers in Exam_Score (> 100)
+outliers = df_clean[df_clean['Exam_Score'] > 100]
+print(f"Rows with Exam_Score > 100: {len(outliers)}")
+
+# Remove values outside theoretical range (0-100)
+df_clean = df_clean[df_clean["Exam_Score"].between(0, 100)].copy()
+df_clean.reset_index(drop=True, inplace=True)
+```
+
+---
+
+## 5 - Feature Engineering
+
+```{python}
+df_fe = df_clean.copy()
+
+# Study Intensity
+df_fe["Study_Intensity"] = df_fe["Hours_Studied"] * (df_fe["Attendance"] / 100)
+
+# Total Academic Effort
+df_fe["Academic_Effort"] = df_fe["Hours_Studied"] + df_fe["Tutoring_Sessions"]
+
+# Study-Sleep Balance
+df_fe["Study_Sleep_Balance"] = (df_fe["Hours_Studied"] - (df_fe["Sleep_Hours"] * 7))
+
+display(df_fe[["Study_Intensity", "Academic_Effort", "Study_Sleep_Balance"]].describe())
+```

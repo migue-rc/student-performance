@@ -1,0 +1,10 @@
+---
+title: "Conclusions"
+---
+
+## 8 - Conclusions
+
+- **Data Quality:** The dataset is high quality with minimal cleaning required.
+- **Best Model:** Linear Regression is the most effective (R2 ~0.825), showing that factors like attendance and study hours have a strong linear relationship with performance.
+- **Segmentation:** K-Means identified distinct student profiles, which can help in designing targeted educational interventions.
+- **Reflection:** Machine Learning provides powerful tools for early intervention in education, shifting from reacting to failure to preventing it.

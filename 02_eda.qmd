@@ -1,0 +1,80 @@
+---
+title: "Exploratory Data Analysis"
+---
+
+```{python}
+#| echo: false
+#| output: false
+import pandas as pd
+import numpy as np
+import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+
+# Data loading and cleaning
+path = 'data/StudentPerformanceFactors.csv'
+df = pd.read_csv(path)
+df_clean = df.copy()
+cols_to_fix = ['Teacher_Quality', 'Parental_Education_Level', 'Distance_from_Home']
+for col in cols_to_fix:
+    if col in df_clean.columns:
+        moda = df_clean[col].mode()[0]
+        df_clean[col] = df_clean[col].fillna(moda)
+df_clean = df_clean[df_clean["Exam_Score"].between(0, 100)].copy()
+df_clean.reset_index(drop=True, inplace=True)
+```
+
+## 4 - Exploratory Data Analysis
+
+### 4.1 Univariate Analysis
+
+```{python}
+numeric_cols = df_clean.select_dtypes(include=['int64', 'float64']).columns.tolist()
+
+for col in numeric_cols:
+    fig = px.histogram(df_clean, x=col, marginal="box", title=f'Distribution of {col}')
+    fig.show()
+
+fig = px.box(df_clean[numeric_cols], title="Boxplots of Numerical Variables")
+fig.show()
+```
+
+**Insights:**
+- Most variables show coherent distributions.
+- `Hours_Studied` and `Exam_Score` are approximately normal.
+- `Attendance` ranges from 60% to 100%, and `Previous_Scores` from 50% to 100%.
+
+### 4.2 Outlier Analysis (IQR Method)
+
+```{python}
+def detect_outliers_iqr(data, columns):
+    outliers_counts = {}
+    for col in columns:
+        Q1 = data[col].quantile(0.25)
+        Q3 = data[col].quantile(0.75)
+        IQR = Q3 - Q1
+        lower_bound = Q1 - 1.5 * IQR
+        upper_bound = Q3 + 1.5 * IQR
+        outliers_counts[col] = len(data[(data[col] < lower_bound) | (data[col] > upper_bound)])
+    return outliers_counts
+
+outliers_dict = detect_outliers_iqr(df_clean, numeric_cols)
+print("Outliers detected per variable:", outliers_dict)
+```
+
+### 4.3 Bivariate Analysis (Correlations)
+
+```{python}
+categorical_cols = ['Parental_Involvement', 'Access_to_Resources', 'Motivation_Level', 'Internet_Access', 'Family_Income',
+    'Teacher_Quality', 'School_Type', 'Peer_Influence', 'Learning_Disabilities', 'Parental_Education_Level', 'Distance_from_Home',
+    'Gender']
+
+for col in categorical_cols:
+    fig = px.box(df_clean, x=col, y='Exam_Score', title=f'{col} vs Exam_Score')
+    fig.show()
+
+# Correlation Matrix
+corr = df_clean[numeric_cols].corr()
+fig = px.imshow(corr, text_auto=".2f", color_continuous_scale='RdBu_r', title="Correlation Matrix")
+fig.show()
+```
