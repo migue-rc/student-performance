@@ -2,6 +2,8 @@
 title: "Modeling"
 ---
 
+## 3 Modeling
+
 ```{python}
 #| echo: false
 #| output: false
@@ -49,7 +51,15 @@ df_fe["Academic_Effort"] = df_fe["Hours_Studied"] + df_fe["Tutoring_Sessions"]
 df_fe["Study_Sleep_Balance"] = (df_fe["Hours_Studied"] - (df_fe["Sleep_Hours"] * 7))
 ```
 
-## 6 - Data Preprocessing
+
+### 3.1 Data Preprocessing
+
+**Preprocessing Pipeline Strategy**
+
+To ensure a fair evaluation across diverse algorithms—especially distance-based models 
+like **Support Vector Machines** (SVM) and **K-Nearest Neighbors** (KNN)—we must scale our data. 
+We utilize a **Pipeline** combined with a **ColumnTransformer** to systematically apply a **StandardScaler** to numerical features (ensuring a mean of 0 and variance of 1) 
+and a **OneHotEncoder** to categorical features.
 
 ```{python}
 target = "Exam_Score"
@@ -77,9 +87,9 @@ X_train_prepared = preprocessor.fit_transform(X_train)
 X_test_prepared = preprocessor.transform(X_test)
 ```
 
-## 7 - Modeling
+### 3.2 Modeling
 
-### 7.1 Supervised Learning
+#### 3.2.1 Supervised Learning
 
 ```{python}
 models = {
@@ -135,11 +145,19 @@ fig.show()
 
 display(df_results)
 ```
+**Model Evaluation**
 
-**Conclusions on Supervised Learning:**
-Linear Regression performed best with an R2 of ~0.82. It error is less than half a point on average (MAE 0.41).
+We evaluated five distinct algorithms using R², 
+Mean Absolute Error (MAE), and Root Mean Squared Error (RMSE). 
+**Linear Regression emerged as the superior model**, 
+achieving an R² of ~0.825 on the test set. 
+The fact that an unregularized linear model outperformed complex ensemble methods 
+(like Random Forest and Gradient Boosting) strongly suggests that the underlying relationship between our engineered 
+features and exam scores is predominantly linear. 
+The MAE indicates that our best model's predictions deviate from the actual exam score by less than half a point on average, 
+demonstrating exceptional practical reliability.
 
-### Analysis of the Best Model (Linear Regression)
+#### 3.2.1.1 Analysis of the Best Model (Linear Regression)
 
 ```{python}
 best_model_name = 'Linear Regression'
@@ -187,7 +205,7 @@ coef_df_export = pd.concat([pd.DataFrame({'Feature': ['Intercept'], 'Weight': [l
 coef_df_export.to_csv('model_weights.csv', index=False)
 ```
 
-## 7.2 Unsupervised Learning
+#### 3.2.2 Unsupervised Learning
 
 ```{python}
 nc = ['Hours_Studied','Attendance', 'Sleep_Hours','Previous_Scores','Tutoring_Sessions','Physical_Activity', 'Study_Intensity', 'Academic_Effort']
@@ -218,3 +236,11 @@ fig = px.scatter(x=X_pca[:, 0], y=X_pca[:, 1], color=clusters.astype(str),
                  labels={'x': 'PC1', 'y': 'PC2'}, title='Cluster Visualization (PCA)')
 fig.show()
 ```
+**Cluster Interpretation**
+
+Unsupervised learning allows us to move beyond simple score prediction and segment the student body into behavioral archetypes. 
+We utilized the *Elbow Method* and the *Silhouette Score* to determine the optimal number of clusters ($k$). 
+The PCA visualization reduces our high-dimensional feature space into **two principal components**, 
+confirming that the K-Means algorithm has successfully identified distinct, 
+non-overlapping student profiles based on their study habits and physical activity. 
+These clusters can be directly translated into targeted academic intervention strategies.

@@ -2,6 +2,7 @@
 title: "Exploratory Data Analysis"
 ---
 
+
 ```{python}
 #| echo: false
 #| output: false
@@ -24,9 +25,9 @@ df_clean = df_clean[df_clean["Exam_Score"].between(0, 100)].copy()
 df_clean.reset_index(drop=True, inplace=True)
 ```
 
-## 4 - Exploratory Data Analysis
+## 2 Exploratory Data Analysis
 
-### 4.1 Univariate Analysis
+### 2.1 Univariate Analysis
 
 ```{python}
 numeric_cols = df_clean.select_dtypes(include=['int64', 'float64']).columns.tolist()
@@ -39,12 +40,15 @@ fig = px.box(df_clean[numeric_cols], title="Boxplots of Numerical Variables")
 fig.show()
 ```
 
-**Insights:**
-- Most variables show coherent distributions.
-- `Hours_Studied` and `Exam_Score` are approximately normal.
-- `Attendance` ranges from 60% to 100%, and `Previous_Scores` from 50% to 100%.
+**Distribution Insights**
+The univariate analysis confirms that our primary continuous variables—most notably `Hours_Studied` and `Exam_Score` approximate a normal distribution. 
+This is an ideal condition for parametric models like Linear Regression, 
+as it **mitigates the risk of residual skewness**. 
+`Attendance` is heavily left-skewed (clustering between 80-100%), 
+which aligns with expected academic behavior but suggests we may need to monitor this feature for ceiling effects during modeling.
 
-### 4.2 Outlier Analysis (IQR Method)
+
+### 2.2 Outlier Analysis (IQR Method)
 
 ```{python}
 def detect_outliers_iqr(data, columns):
@@ -61,8 +65,16 @@ def detect_outliers_iqr(data, columns):
 outliers_dict = detect_outliers_iqr(df_clean, numeric_cols)
 print("Outliers detected per variable:", outliers_dict)
 ```
+**Outlier Treatment Strategy**
 
-### 4.3 Bivariate Analysis (Correlations)
+Using the Interquartile Range (IQR) method, we identified a small subset of outliers, 
+primarily in `Tutoring_Sessions` and `Exam_Score`. 
+Because these represent genuine, 
+plausible extreme values (e.g., exceptional students or those requiring intensive help) rather than measurement errors, 
+we will retain them. 
+Capping or removing these valid edge cases could strip the model of its ability to predict high variance scenarios.
+
+### 2.3 Bivariate Analysis (Correlations)
 
 ```{python}
 categorical_cols = ['Parental_Involvement', 'Access_to_Resources', 'Motivation_Level', 'Internet_Access', 'Family_Income',
@@ -78,3 +90,10 @@ corr = df_clean[numeric_cols].corr()
 fig = px.imshow(corr, text_auto=".2f", color_continuous_scale='RdBu_r', title="Correlation Matrix")
 fig.show()
 ```
+**Correlation and Multicollinearity Analysis**
+
+The correlation matrix provides our first strong indicator of predictive power. 
+We observe a robust positive correlation between `Attendance` and `Exam_Score`, 
+as well as `Hours_Studied` and `Exam_Score`. 
+Fortunately, the predictor variables themselves do not exhibit dangerously high inter-correlations (multicollinearity), 
+meaning models that are sensitive to correlated features (like Linear Regression) will yield stable and interpretable coefficients.

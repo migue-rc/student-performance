@@ -2,9 +2,10 @@
 title: "Data Preparation"
 ---
 
-## 2 - Initial Setup
+## 1 Data Preparation
+### 1.1 Initial Setup
 
-### 2.1 Loading Libraries
+Loading Libraries
 
 ```{python}
 import pandas as pd
@@ -33,9 +34,9 @@ from sklearn.metrics import silhouette_score
 
 ---
 
-## 3 - Data Preparation
+### 1.2 Data Preparation
 
-### 3.1 Data Loading and Quick View
+#### 1.2.1 Data Loading and Quick View
 
 ```{python}
 # =========================== Dataset Loading ===========================
@@ -49,7 +50,7 @@ print('First 5 rows')
 display(df.head())
 ```
 
-### 3.2 Variable Description
+#### 1.2.2 Variable Description
 
 - **`Gender`**: Student's gender (Male/Female).
 - **`Hours_Studied`**: Average number of study hours per week.
@@ -72,16 +73,16 @@ display(df.head())
 - **`Distance_from_Home`**: Distance between home and school (Near, Moderate, Far).
 - **`Exam_Score`**: Final score obtained (Target variable).
 
-### 3.3 Data Summary
+#### 1.2.3 Data Summary
 
 ```{python}
 df.info()
 display(df.describe())
 ```
 
-### 3.4 Data Cleaning
+#### 1.2.4 Data Cleaning
 
-#### 3.4.1 Nulls and Duplicates
+##### 1.2.4.1 Nulls and Duplicates
 
 ```{python}
 null_counts = df.isnull().sum()
@@ -90,7 +91,7 @@ print(null_counts[null_counts > 0])
 print("\nNumber of duplicate rows:", df.duplicated().sum())
 ```
 
-#### 3.4.2 Null Diagnosis
+##### 1.2.4.2 Null Diagnosis
 
 ```{python}
 nan_cols = [col for col in df.columns if df[col].isna().any()]
@@ -101,11 +102,17 @@ for col in nan_cols:
     fig = px.box(df_nan, x="Status", y='Exam_Score', title=f'Impact of Nulls in {col}')
     fig.show()
 ```
+##### 1.2.4.3 Null Value Diagnosis and Strategy
 
-#### 3.4.3 Missing Value Treatment (Imputation)
-
-**Analysis:**
-Variables like `Teacher_Quality`, `Parental_Education_Level`, and `Distance_from_Home` have real missing values (NaN). Since the percentage is low (< 2%) and the distribution of `Exam_Score` is similar between null and complete data, we conclude that the absence of data is not strongly correlated with the dependent variable.
+Before treating missing data, it is crucial to understand its mechanism. 
+By visualizing the distribution of the target variable (Exam_Score) against the presence 
+or absence of data in features like `Teacher_Quality`, `Parental_Education_Level`, and `Distance_from_Home`, 
+we can assess if the data is **Missing Completely at Random** (MCAR). 
+The box plots reveal no significant divergence in exam scores between the null and non-null groups. 
+Because these missing values represent less than 2% of the total dataset, 
+dropping them or using complex imputation methods (like KNN imputation) is unnecessary. 
+We will proceed with mode **imputation**, 
+which preserves the central tendency of these categorical features without introducing statistical bias.
 
 **Action:**
 We impute these values using the **mode** (most frequent value).
@@ -122,7 +129,7 @@ for col in cols_to_fix:
 print(f"Remaining nulls in df_clean: {df_clean.isnull().sum().sum()}")
 ```
 
-#### 3.4.4 Removing Inconsistencies
+##### 1.2.4.4 Removing Inconsistencies
 
 ```{python}
 # Detecting outliers in Exam_Score (> 100)
@@ -136,7 +143,18 @@ df_clean.reset_index(drop=True, inplace=True)
 
 ---
 
-## 5 - Feature Engineering
+### 1.3 Feature Engineering
+
+**Feature Engineering Rationale**
+To capture non-linear relationships and deeper behavioral patterns, we construct composite features:
+
+**Study Intensity**: Raw study hours can be misleading if a student frequently misses class. 
+By multiplying `Hours_Studied` by the `Attendance` percentage, we create a proxy for *effective academic engagement*.
+
+**Academic Effort**: This combines independent study hours with `Tutoring_Sessions` to quantify total time invested in learning.
+
+**Study-Sleep Balance**: Cognitive performance relies heavily on rest. This metric subtracts weekly sleep hours from study hours. 
+A highly negative or excessively positive variance can help models detect burnout or lack of effort.
 
 ```{python}
 df_fe = df_clean.copy()

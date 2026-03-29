@@ -2,4 +2,4 @@ publish:
 	quarto publish gh-pages
 
 preview:
-	quarto preview index.ipynb
+	quarto preview index.qmd
