@@ -1,6 +1,7 @@
 # Student Performance Factors: A Multivariate Machine Learning Analysis 🎓
 
 **[View the Interactive Project & Score Predictor Here](https://migue-rc.github.io/student-performance/)**
+
 ![preview](student_performance_preview.gif)
 
 ## Executive Summary
