@@ -1,4 +1,4 @@
-# Student Performance Factors: A Multivariate Machine Learning Analysis 🎓
+# Student Performance Factors: A Multivariate Machine Learning Analysis
 
 **[View the Interactive Project & Score Predictor Here](https://migue-rc.github.io/student-performance/)**
 
@@ -10,7 +10,7 @@ This project explores the determinants of academic success using a multivariate 
 The ultimate objective of this research is to segment student profiles and accurately predict final evaluation scores, providing a data-driven framework for educational institutions to transition from reactive interventions to proactive, targeted support strategies.
 
 ## Key Insights & Results
-* **Predictive Performance:** A Linear Regression model emerged as the most robust predictor of academic success, achieving an $R^2 \approx 0.825$ and a Mean Absolute Error (MAE) of $0.41$ points on the test set.
+* **Predictive Performance:** A Linear Regression model emerged as the most robust predictor of academic success, achieving an $R^2 \approx 0.825$ and a Mean Absolute Error (MAE) of $0.42$ points on the test set.
 * **The Power of Engineered Features:** Composite metrics created during feature engineering, such as *Study Intensity* (study hours weighted by attendance percentage) and *Study-Sleep Balance*, proved to be highly indicative of student outcomes.
 * **Behavioral Segmentation:** Utilizing K-Means clustering and Principal Component Analysis (PCA), the student body was successfully segmented into distinct behavioral archetypes, offering clear mappings for tailored academic programs.
 

@@ -2,7 +2,6 @@
 title: "Conclusions"
 ---
 
-## 4 Conclusions
 
 **Final Reflections and Impact**
 
@@ -12,7 +11,7 @@ requiring minimal imputation.
 Our exploratory analysis highlighted that fundamental academic habits—specifically attendance 
 and dedicated study hours—maintain a highly linear and predictable relationship with final exam scores.
 
-** Predictive Power:**
+**Predictive Power:**
 With an R² of 0.825, our Linear Regression model successfully captures the vast majority of the variance in student performance. 
 By extracting the model's coefficients, 
 we have isolated the exact weight that factors like 'Study Intensity' have on educational outcomes, 
@@ -28,3 +27,9 @@ Ultimately, the integration of supervised and unsupervised machine learning mode
 By leveraging these insights, institutions can transition from a reactive approach—addressing 
 poor performance after an exam—to a proactive strategy, 
 identifying at-risk patterns early and optimizing the allocation of tutoring resources.
+**Limitations & Honest Caveats:**
+
+- **Prior achievement does heavy lifting.** `Previous_Scores` is one of the predictors, so part of the model's R² reflects past performance predicting future performance — the habits and environment variables explain the *remainder*.
+- **The data is unusually clean.** Minimal missingness and textbook-linear relationships are typical of curated Kaggle datasets; real school records would be messier and the fit correspondingly weaker.
+- **Test-set optimism.** Cross-validated R² on training folds is ~0.72 versus 0.825 on the held-out test set — the honest performance estimate lies between the two.
+- **Association, not causation.** Coefficients describe correlations in observational data; raising a student's slider does not guarantee the predicted change. Interventions should be piloted and measured.

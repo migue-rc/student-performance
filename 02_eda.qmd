@@ -25,7 +25,6 @@ df_clean = df_clean[df_clean["Exam_Score"].between(0, 100)].copy()
 df_clean.reset_index(drop=True, inplace=True)
 ```
 
-## 2 Exploratory Data Analysis
 
 ### 2.1 Univariate Analysis
 
